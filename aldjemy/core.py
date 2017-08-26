@@ -2,8 +2,8 @@ import warnings
 from collections import deque
 from django.db import connections
 from django.conf import settings
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy import MetaData, create_engine, orm
+from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.pool import _ConnectionRecord as _ConnectionRecordBase
 
 from .table import generate_tables
@@ -58,7 +58,16 @@ def get_engine(alias='default'):
         engine_string = get_engine_string(alias)
         # we have to use autocommit=True, because SQLAlchemy
         # is not aware of Django transactions
-        kw = {}
+        kw = {
+            'poolclass': QueuePool,
+            'echo': settings,
+            'echo_pool': True,
+            'pool_size': settings.SA_POOL_SIZE,
+            'max_overflow': settings.SA_POOL_MAX_OVERFLOW,
+            'pool_pre_ping': settings.SA_POOL_PREPING,
+            'pool_recycle': -1,
+            'strategy':'threadlocal'
+        }
         if engine_string == 'sqlite3':
             kw['native_datetime'] = True
 
