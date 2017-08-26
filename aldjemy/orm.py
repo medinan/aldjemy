@@ -17,12 +17,13 @@ def get_session(alias='default'):
         session_factory = orm.sessionmaker(bind=get_engine(alias))
         session = orm.scoped_session(session_factory)
         connection.sa_session = session
-    return connection.sa_session
+    return connection.sa_session()
 
 
 def new_session(sender, connection, **kw):
     if connection.alias in settings.DATABASES:
         get_session(alias=connection.alias)
+
 
 signals.connection_created.connect(new_session)
 

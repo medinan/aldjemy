@@ -60,20 +60,18 @@ def get_engine(alias='default'):
         # is not aware of Django transactions
         kw = {
             'poolclass': QueuePool,
-            'echo': settings,
-            'echo_pool': True,
-            'pool_size': settings.SA_POOL_SIZE,
-            'max_overflow': settings.SA_POOL_MAX_OVERFLOW,
-            'pool_pre_ping': settings.SA_POOL_PREPING,
+            'echo': getattr(settings, 'SA_ECHO', False),
+            'echo_pool': getattr(settings, 'SA_ECHO_POOL', False),
+            'pool_size': getattr(settings, 'SA_POOL_SIZE', 10),
+            'max_overflow': getattr(settings, 'SA_POOL_MAX_OVERFLOW', 10),
+            'pool_pre_ping': getattr(settings, 'SA_POOL_PREPING', False),
             'pool_recycle': -1,
             'strategy':'threadlocal'
         }
         if engine_string == 'sqlite3':
             kw['native_datetime'] = True
 
-        pool = DjangoPool(alias=alias, creator=None)
-        Cache.engines[alias] = create_engine(get_connection_string(alias),
-                                             pool=pool, **kw)
+        Cache.engines[alias] = create_engine(get_connection_string(alias), **kw)
     return Cache.engines[alias]
 
 
