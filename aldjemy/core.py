@@ -58,15 +58,19 @@ def get_engine(alias='default'):
         engine_string = get_engine_string(alias)
         # we have to use autocommit=True, because SQLAlchemy
         # is not aware of Django transactions
+        pool = DjangoPool(
+            alias=alias,
+            creator=None,
+            echo=getattr(settings, 'SA_ECHO_POOL', False),
+            pool_size=getattr(settings, 'SA_POOL_SIZE', 10),
+            max_overflow=getattr(settings, 'SA_POOL_MAX_OVERFLOW', 10),
+            pre_ping=getattr(settings, 'SA_POOL_PREPING', False),
+            recycle=getattr(settings, 'SA_RECYCLE', -1),
+        )
         kw = {
-            'poolclass': QueuePool,
+            'pool': pool,
             'echo': getattr(settings, 'SA_ECHO', False),
-            'echo_pool': getattr(settings, 'SA_ECHO_POOL', False),
-            'pool_size': getattr(settings, 'SA_POOL_SIZE', 10),
-            'max_overflow': getattr(settings, 'SA_POOL_MAX_OVERFLOW', 10),
-            'pool_pre_ping': getattr(settings, 'SA_POOL_PREPING', False),
-            'pool_recycle': -1,
-            'strategy':'threadlocal'
+            'strategy':getattr(settings, 'SA_STRATEGY', 'threadlocal')
         }
         if engine_string == 'sqlite3':
             kw['native_datetime'] = True
@@ -88,13 +92,13 @@ def get_tables():
     return get_meta().tables
 
 
-class DjangoPool(NullPool):
+class DjangoPool(QueuePool):
     def __init__(self, alias, *args, **kwargs):
         super(DjangoPool, self).__init__(*args, **kwargs)
         self.alias = alias
 
     def status(self):
-        return "DjangoPool"
+        return "DjangoQueuePool"
 
     def _create_connection(self):
         return _ConnectionRecord(self, self.alias)
@@ -104,11 +108,15 @@ class DjangoPool(NullPool):
 
         return DjangoPool(
             self.alias,
-            self._creator,
-            recycle=self._recycle,
-            echo=self.echo,
+            self._creator, pool_size=self._pool.maxsize,
+            max_overflow=self._max_overflow,
+            timeout=self._timeout,
+            recycle=self._recycle, echo=self.echo,
             logging_name=self._orig_logging_name,
-            use_threadlocal=self._use_threadlocal
+            use_threadlocal=self._use_threadlocal,
+            reset_on_return=self._reset_on_return,
+            _dispatch=self.dispatch,
+            dialect=self._dialect
         )
 
 
