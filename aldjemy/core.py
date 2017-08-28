@@ -144,11 +144,5 @@ class _ConnectionRecord(_ConnectionRecordBase):
             return Wrapper(connection.connection)
         return connection.connection
 
-    def close(self):
-        pass
-
-    def invalidate(self, e=None, soft=False):
-        pass
-
     def get_connection(self):
         return self.connection
